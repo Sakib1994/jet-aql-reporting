@@ -40,13 +40,15 @@ class processAqlHourlyData extends Command
      */
     public function handle()
     {
-        
+        // 可能なファイル名を作成します。
         $fileNameHead = "SSS" . Carbon::now('Asia/Tokyo')->isoFormat('YYYYMMDDHH');
         $fileName = $fileNameHead . "0500.csv";
         $fileName1 = $fileNameHead . "0459.csv";
         $fileName2 = $fileNameHead . "0501.csv";
         $fileName3 = $fileNameHead . "0502.csv";
         printf("file name: %s\n", $fileName);
+        // シェルコマンドでダウンロードしたファイルにアクセスします。
+        // 存在する場合は、さらに処理します。
         if (Storage::disk('sheets')->exists($fileName)) {
             $this->save($fileName);
         } else if (Storage::disk('sheets')->exists($fileName1)) {
@@ -60,6 +62,7 @@ class processAqlHourlyData extends Command
             return 0;
             // continue;
         }
+        // データベースにアーカイブ後にファイルを削除する。
         if (Storage::disk('sheets')->exists($fileName1)) {
             Storage::disk('sheets')->delete($fileName1);
         }
@@ -74,11 +77,14 @@ class processAqlHourlyData extends Command
     }
     public function save($fileName)
     {
+        // SHIFT-JISでエンコードされたデータをUTF-8に変換します。
         $file = mb_convert_encoding(Storage::disk('sheets')->get($fileName), "UTF-8", "SHIFT-JIS");
+        // 個々の行を処理してデータを抽出します。
         $rows = explode("\r\n", $file);
         $header = array_shift($rows);
         $accounts = [];
         $header = explode(',', $header);
+        // データがある場合は、行ごとにデータベースに保存します。
         if (count($rows) > 0 && $rows[0] != "") {
             foreach ($rows as $row => $data) {
                 if (strlen($data) > 0) {
@@ -95,6 +101,7 @@ class processAqlHourlyData extends Command
                 }
             }
         }
+        // データベースにアーカイブ後にファイルを削除する。
         Storage::disk('sheets')->delete($fileName);
     }
 }
