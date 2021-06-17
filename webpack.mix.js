@@ -16,8 +16,15 @@ mix.js('resources/js/app.js', 'public/js').vue()
         require('postcss-import'),
         require('tailwindcss'),
     ])
-    .webpackConfig(require('./webpack.config'));
+    .sourceMaps()
+    .webpackConfig(require('./webpack.config'))
+    .disableSuccessNotifications();
 
 if (mix.inProduction()) {
     mix.version();
+}
+if ( ! mix.inProduction()) {
+    mix.webpackConfig({
+        devtool: 'inline-source-map'
+    })
 }
