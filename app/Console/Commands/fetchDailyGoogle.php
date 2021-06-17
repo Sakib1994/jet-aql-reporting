@@ -4,11 +4,11 @@ namespace App\Console\Commands;
 
 use App\Models\adsAccount;
 use App\Models\DailyAdsData;
+use Carbon\Carbon;
 use Google\Ads\GoogleAds\Lib\OAuth2TokenBuilder;
 use Google\Ads\GoogleAds\Lib\V7\GoogleAdsClient;
 use Google\Ads\GoogleAds\Lib\V7\GoogleAdsClientBuilder;
 use Illuminate\Console\Command;
-use Carbon\Carbon;
 
 class fetchDailyGoogle extends Command
 {
@@ -43,20 +43,21 @@ class fetchDailyGoogle extends Command
      */
     public function handle()
     {
+        // API接続を構成します。
         $oAuth2Credential = (new OAuth2TokenBuilder())->fromFile()->build();
 
-        // Construct a Google Ads client configured from a properties file and the
-        // OAuth2 credentials above.
         $googleAdsClient = (new GoogleAdsClientBuilder())->fromFile()
             ->withOAuth2Credential($oAuth2Credential)
             ->withLoginCustomerId(4387461648)
             ->build();
-        $accountIds = adsAccount::select("id", "accountId")->where('platform','google')->get();
+        // データベースからすべてのGoogle広告アカウントの顧客IDを取得します。
+        $accountIds = adsAccount::select("id", "accountId")->where('platform', 'google')->get();
+        // 全部の広告アカウントのグーグルから毎日データを取得し、データベースに保存します。
         foreach ($accountIds as $account) {
             print_r($account->id . "\n");
-            if (self::fetchFromApi( $googleAdsClient, $account->accountId, $account->id)) {
+            if (self::fetchFromApi($googleAdsClient, $account->accountId, $account->id)) {
                 $this->info('Successfully command executed.');
-            }else{
+            } else {
                 $this->error('Already exist in the databsse.');
             }
         }
@@ -67,20 +68,19 @@ class fetchDailyGoogle extends Command
         print_r($customerId, $accountId . "\n");
         $date = '2021-06-03';
         $date = Carbon::now('Asia/Tokyo')->sub(1, 'day')->isoFormat('YYYY-MM-DD');
+        // データがデータベースにすでに存在する場合は、データを確認する。
+        // 存在する場合は、終了します。
         $isSaved = DailyAdsData::where('date', $date)->firstWhere('AdsAccountId', $accountId);
         if ($isSaved) {
             return 0;
         }
         $googleAdsServiceClient = $googleAdsClient->getGoogleAdsServiceClient();
-        // Creates a query that retrieves hotel-ads statistics for each campaign and ad group.
-        // Returned statistics will be segmented by the check-in day of week and length of stay.
-
-        // $query = "SELECT customer.descriptive_name, segments.date, metrics.clicks, metrics.impressions, metrics.ctr, metrics.average_cpc, metrics.cost_micros, metrics.conversions, metrics.cost_per_conversion, metrics.conversions_from_interactions_rate FROM customer WHERE segments.date >= '2021-05-01' AND segments.date <= '2021-05-15'";
+        // これは特別なクエリ言語ですGAQL.dataはこれを使用してグーグルからフェッチされます。
         $queryFromBuider = "SELECT customer.descriptive_name, segments.date, metrics.clicks, metrics.ctr, metrics.impressions, metrics.conversions, metrics.average_cpc, metrics.cost_per_conversion, metrics.cost_micros, metrics.conversions_from_interactions_rate FROM customer WHERE segments.date = '$date'";
-        // Issues a search request by specifying page size.
+        // 毎日データグーグルを取得します。
         $response = $googleAdsServiceClient->search($customerId, $queryFromBuider, ['pageSize' => self::PAGE_SIZE]);
 
-        // Iterates over all rows in all pages and prints the requested field values for each row.
+        // すべての行をて印刷し、フィールド値をデータベースに保存します。
         foreach ($response->iterateAllElements() as $googleAdsRow) {
             if ($googleAdsRow->getMetrics()->getClicks() == 0) {
                 continue;
@@ -99,6 +99,7 @@ class fetchDailyGoogle extends Command
                 round($googleAdsRow->getMetrics()->getCostPerConversion() / 1000000, 2),
                 PHP_EOL
             );
+            // 各行の要求フィールド値をデータベースに保存します。
             $dailyAdsData = new DailyAdsData([
                 "AdsAccountId" => $accountId,
                 "date" => $googleAdsRow->getSegments()->getDate(),

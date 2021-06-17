@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\adsAccount;
 use App\Models\HourlyAdsData;
+use Carbon\Carbon;
 use Google\Ads\GoogleAds\Lib\OAuth2TokenBuilder;
 use Google\Ads\GoogleAds\Lib\V7\GoogleAdsClient;
 use Google\Ads\GoogleAds\Lib\V7\GoogleAdsClientBuilder;
@@ -42,18 +43,17 @@ class fetchHourlyGoogleApi extends Command
      */
     public function handle()
     {
+        // API接続を構成します。
         $oAuth2Credential = (new OAuth2TokenBuilder())->fromFile()->build();
 
-        // Construct a Google Ads client configured from a properties file and the
-        // OAuth2 credentials above.
         $googleAdsClient = (new GoogleAdsClientBuilder())->fromFile()
             ->withOAuth2Credential($oAuth2Credential)
             ->withLoginCustomerId(4387461648)
             ->build();
+        // データベースからすべてのGoogle広告アカウントの顧客IDを取得します。
         $accountIds = adsAccount::select("id", "accountId")->where('platform', 'google')->get();
-        // dump($accountIds);
+        // 広告アカウントのグーグルから毎時データを取得し、データベースに保存します。
         foreach ($accountIds as $account) {
-            // print_r($account->id . "\n");
             if (self::fetchFromApi($googleAdsClient, $account->accountId, $account->id)) {
                 $this->info('Successfully command executed.');
             } else {
@@ -65,29 +65,33 @@ class fetchHourlyGoogleApi extends Command
     public static function fetchFromApi(GoogleAdsClient $googleAdsClient, int $customerId, int $accountId)
     {
         printf($customerId . " " . $accountId . "\n");
-        // $getTheNow = Carbon::now('Asia/Tokyo');
-        // $date = $getTheNow->isoFormat('YYYY-MM-DD');
-        // $hourtosave = $getTheNow->sub(1, 'hour')->isoFormat('HH');
-        // $hour = $getTheNow->sub(1, 'hour')->isoFormat('HH');
+        $getTheNow = Carbon::now('Asia/Tokyo');
+        $date = $getTheNow->isoFormat('YYYY-MM-DD');
+        $hourtoSave = $getTheNow->sub(1, 'hour')->isoFormat('HH');
+        $hour = $getTheNow->sub(1, 'hour')->isoFormat('HH');
 
-        $date = "2021-06-01";
+        /*$date = "2021-06-01";
         // $hourlower = $getTheNow->sub(2,'hour')->isoFormat('HH');
         for ($hour = 0; $hour < 24; $hour++) {
             // $hourProcess = $hour < 10 ? "0$hour" : "$hour";
-            $hourtoSave = $hour < 9 ? "0" . ($hour + 1) : "" . ($hour + 1);
+            $hourtoSave = $hour < 9 ? "0" . ($hour + 1) : "" . ($hour + 1);*/
             // $time = "$date $hourtosave:00:00";
             $time = "$date $hourtoSave:00:00";
             print_r("$customerId $time\n");
+            // データがデータベースにすでに存在する場合は、データを確認する。
+            // 存在する場合は、終了します。
             $isSaved = HourlyAdsData::where('time', $time)
                 ->firstWhere('AdsAccountId', $accountId);
             if ($isSaved) {
-                // return 0;
-                continue;
+                return 0;
+                // continue;
             }
+            // 毎時データグーグルを取得します。
             $googleAdsServiceClient = $googleAdsClient->getGoogleAdsServiceClient();
+            // これは特別なクエリ言語ですGAQL.dataはこれを使用してグーグルからフェッチされます。
             $queryFromBuider = "SELECT customer.descriptive_name, segments.hour, metrics.clicks, metrics.ctr, metrics.impressions, metrics.conversions, metrics.average_cpc, metrics.cost_per_conversion, metrics.cost_micros, metrics.conversions_from_interactions_rate FROM customer WHERE segments.date = '$date' AND segments.hour = $hour";
             $response = $googleAdsServiceClient->search($customerId, $queryFromBuider, ['pageSize' => self::PAGE_SIZE]);
-
+            // APIからデータをループして、データを取得します。
             foreach ($response->iterateAllElements() as $googleAdsRow) {
                 if ($googleAdsRow->getMetrics()->getClicks() == 0) {
                     // return 0;
@@ -107,6 +111,7 @@ class fetchHourlyGoogleApi extends Command
                     round($googleAdsRow->getMetrics()->getCostPerConversion() / 1000000, 2),
                     PHP_EOL
                 );
+                // グーグルから毎時データを取得し、データベースに保存します。
                 $hourlyAdsData = new HourlyAdsData([
                     "AdsAccountId" => $accountId,
                     "time" => $time,
@@ -121,7 +126,7 @@ class fetchHourlyGoogleApi extends Command
                 ]);
                 $hourlyAdsData->save();
             }
-        }
+        // }
         return 1;
     }
 }
