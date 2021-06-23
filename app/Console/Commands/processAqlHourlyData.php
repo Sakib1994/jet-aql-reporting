@@ -42,11 +42,12 @@ class processAqlHourlyData extends Command
     {
         // 可能なファイル名を作成します。
         $fileNameHead = "SSS" . Carbon::now('Asia/Tokyo')->isoFormat('YYYYMMDDHH');
-        $fileNameHead = "SSS2021060109";
+        // $fileNameHead = "SSS2021060109";
         $fileName = $fileNameHead . "0500.csv";
         $fileName1 = $fileNameHead . "0459.csv";
         $fileName2 = $fileNameHead . "0501.csv";
         $fileName3 = $fileNameHead . "0502.csv";
+        $fileName4 = $fileNameHead . "2125.csv";
         // for ($i = 0; $i < 24; $i++) {
         //     $fileNameHeadl = $i < 10 ? $fileNameHead . "0$i" : $fileNameHead . "$i";
         //     $fileName = $fileNameHeadl . "0500.csv";
@@ -62,9 +63,14 @@ class processAqlHourlyData extends Command
                 $this->save($fileName1);
             } else if (Storage::disk('sheets')->exists($fileName2)) {
                 $this->save($fileName2);
-            } else if (Storage::disk('sheets')->exists($fileName3)) {
+            } 
+            else if (Storage::disk('sheets')->exists($fileName3)) {
                 $this->save($fileName3);
-            } else {
+            } 
+            else if (Storage::disk('sheets')->exists($fileName4)) {
+                $this->save($fileName4);
+            } 
+            else {
                 $this->error('Command did not execute. No such file.');
                 return 0;
                 // continue;
