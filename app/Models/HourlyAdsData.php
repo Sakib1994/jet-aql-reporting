@@ -9,6 +9,6 @@ class HourlyAdsData extends Model
     use HasFactory;
     public function account()
     {
-        return $this->belongsTo(AdsAccount::class, 'AdsAccountId');
+        return $this->belongsTo(adsAccount::class, 'AdsAccountId');
     }
 }

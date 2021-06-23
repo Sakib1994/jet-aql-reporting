@@ -174,11 +174,11 @@ class AccountsSummarizeController extends Controller
         }
         if ($today) {
             $googleTotalCost = 0;
-            // $oAuth2Credential = (new OAuth2TokenBuilder())->fromFile('/var/www/html/testJob/google_ads_php.ini')->build();
-            $oAuth2Credential = (new OAuth2TokenBuilder())->fromFile()->build();
+            $oAuth2Credential = (new OAuth2TokenBuilder())->fromFile('/var/www/html/testJob/google_ads_php.ini')->build();
+            // $oAuth2Credential = (new OAuth2TokenBuilder())->fromFile()->build();
             
-            // $googleAdsClient = (new GoogleAdsClientBuilder())->fromFile('/var/www/html/testJob/google_ads_php.ini')
-            $googleAdsClient = (new GoogleAdsClientBuilder())->fromFile()
+            $googleAdsClient = (new GoogleAdsClientBuilder())->fromFile('/var/www/html/testJob/google_ads_php.ini')
+            // $googleAdsClient = (new GoogleAdsClientBuilder())->fromFile()
                 ->withOAuth2Credential($oAuth2Credential)
                 ->withLoginCustomerId(4387461648)
                 ->build();
