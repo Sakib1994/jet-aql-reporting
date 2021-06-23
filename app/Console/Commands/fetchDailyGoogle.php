@@ -66,8 +66,8 @@ class fetchDailyGoogle extends Command
     public static function fetchFromApi(GoogleAdsClient $googleAdsClient, int $customerId, int $accountId)
     {
         print_r($customerId, $accountId . "\n");
-        $date = '2021-06-03';
         $date = Carbon::now('Asia/Tokyo')->sub(1, 'day')->isoFormat('YYYY-MM-DD');
+        // $date = '2021-06-21';
         // データがデータベースにすでに存在する場合は、データを確認する。
         // 存在する場合は、終了します。
         $isSaved = DailyAdsData::where('date', $date)->firstWhere('AdsAccountId', $accountId);

@@ -4,6 +4,17 @@
       <h2 class="font-semibold text-xl text-gray-800 leading-tight">
         Daily Ads Info
       </h2>
+      <div class="relative">
+        <div class="absolute -top-9 right-0 mx-2">
+          <!-- absolute -top-7 right-0 -->
+          <inertia-link
+            :href="route('hourly-ads.fetchhourly')"
+            class="inline-block bg-indigo-500 hover:bg-indigo-400 focus:outline-none focus:ring focus:ring-offset-2 focus:ring-indigo-500 focus:ring-opacity-50 text-white px-5 py-3 hover:-translate-y-0.5 transform transition active:bg-indigo-600 rounded-lg shadow-lg uppercase tracking-wider font-semibold text-sm"
+          >
+            Add Yahoo data
+          </inertia-link>
+        </div>
+      </div>
     </template>
 
     <div class="py-8">
@@ -14,6 +25,7 @@
               <thead>
                 <tr class="text-sm font-light">
                   <th class="px-1">日付</th>
+                  <th class="px-1">time</th>
                   <th class="px-1">Account Name</th>
                   <th class="px-1">表示回数</th>
                   <th class="px-1">クリック数</th>
@@ -36,19 +48,20 @@
                       : 'hover:bg-gray-200',
                   ]"
                 >
-                  <td class="px-2">{{ data.time }}</td>
+                  <td class="px-2">{{ formatDate(data.time) }}</td>
+                  <td class="px-2">{{ formatTime(data.time) }}</td>
                   <td class="px-2">{{ data.name }}</td>
                   <td class="px-2">{{ data.impressions }}</td>
                   <td class="px-2">{{ data.clicks }}</td>
-                  <td class="px-2">{{ data.ctr }}</td>
+                  <td class="px-2">{{ data.ctr }}%</td>
                   <td class="px-2">{{ formatPrice(data.cpc) }}</td>
                   <td class="px-2">{{ formatPrice(data.cost) }}</td>
                   <td class="px-2">{{ data.conversions }}</td>
-                  <td class="px-2">{{ data.conversions_rate }}</td>
+                  <td class="px-2">{{ data.conversions_rate }}%</td>
                   <td class="px-2">{{ formatPrice(data.cost_per_conversion) }}</td>
                   <td class="px-2 flex flex-row space-x-2">
                     <inertia-link
-                      :href="route('daily-ads.edit', data.id)"
+                      :href="route('hourly-ads.edit', data.id)"
                       class="text-blue-600"
                     >
                       <svg
@@ -92,6 +105,14 @@ export default {
       });
       return formatter.format(value);
     },
+    formatDate(datetime){
+      const formatedDatetime = new Date(datetime);
+      return formatedDatetime.toLocaleDateString('en-US');
+    },
+    formatTime(datetime){
+      const formatedDatetime = new Date(datetime);
+      return formatedDatetime.toLocaleTimeString('en-US');
+    }
   },
   props: {
     hourlyAds: Object,

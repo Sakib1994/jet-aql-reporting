@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AccountsSummarizeController;
 use App\Http\Controllers\AdsAccountController;
 use App\Http\Controllers\DailyAdsDataController;
 use App\Http\Controllers\HourlyAdsDataController;
@@ -32,8 +33,15 @@ Route::middleware(['auth:sanctum', 'verified'])->get('/dashboard', function () {
 })->name('dashboard');
 
 Route::get('/ads-accounts/fetch', [AdsAccountController::class, 'fetch'])->name('ads-accounts.fetch');
-Route::post('/ads-accounts/savehourlyfromcsv', [AdsAccountController::class, 'savehourlyfromcsv'])->name('ads-accounts.savehourlyfromcsv');
-Route::post('/ads-accounts/savedailyfromcsv', [AdsAccountController::class, 'savedailyfromcsv'])->name('ads-accounts.savedailyfromcsv');
+Route::get('/ads-accounts/fetch', [AdsAccountController::class, 'fetch'])->name('ads-accounts.fetch');
+Route::get('/daily-ads/fetchdaily', [DailyAdsDataController::class, 'fetch'])->name('daily-ads.fetchdaily');
+Route::post('/daily-ads/savedailyfromcsv', [DailyAdsDataController::class,'savedailyfromcsv' ])->name('daily-ads.savedailyfromcsv');
+Route::get('/hourly-ads/fetchhourly', [HourlyAdsDataController::class, 'fetch'])->name('hourly-ads.fetchhourly');
+Route::post('/hourly-ads/savehourlyfromcsv', [HourlyAdsDataController::class, 'savehourlyfromcsv'])->name('hourly-ads.savehourlyfromcsv');
+Route::get('/aql-daily-summary/{startDate?}/{endDate?}', [AccountsSummarizeController::class, 'aqlProcress'])->name('aql-daily-summary');
+Route::get('/sss-daily-summary/{startDate?}/{endDate?}', [AccountsSummarizeController::class, 'processSSS'])->name('sss-daily-summary');
+Route::get('/sss-detail/{date}', [AccountsSummarizeController::class, 'datewiseExperiment'])->name('sss-detail-exp');
+Route::get('/hourly-ads/{date}/{accountId}', [HourlyAdsDataController::class, 'datewise'])->name('datewise-hourly-detail');
 Route::resources([
     'ads-accounts' => AdsAccountController::class,
 ]);
@@ -42,4 +50,7 @@ Route::resources([
 ]);
 Route::resources([
     'hourly-ads' => HourlyAdsDataController::class,
+]);
+Route::resources([
+    'daily-summary' => AccountsSummarizeController::class,
 ]);

@@ -42,37 +42,45 @@ class processAqlHourlyData extends Command
     {
         // 可能なファイル名を作成します。
         $fileNameHead = "SSS" . Carbon::now('Asia/Tokyo')->isoFormat('YYYYMMDDHH');
+        $fileNameHead = "SSS2021060109";
         $fileName = $fileNameHead . "0500.csv";
         $fileName1 = $fileNameHead . "0459.csv";
         $fileName2 = $fileNameHead . "0501.csv";
         $fileName3 = $fileNameHead . "0502.csv";
-        printf("file name: %s\n", $fileName);
-        // シェルコマンドでダウンロードしたファイルにアクセスします。
-        // 存在する場合は、さらに処理します。
-        if (Storage::disk('sheets')->exists($fileName)) {
-            $this->save($fileName);
-        } else if (Storage::disk('sheets')->exists($fileName1)) {
-            $this->save($fileName1);
-        } else if (Storage::disk('sheets')->exists($fileName2)) {
-            $this->save($fileName2);
-        } else if (Storage::disk('sheets')->exists($fileName3)) {
-            $this->save($fileName3);
-        } else {
-            $this->error('Command did not execute. No such file.');
-            return 0;
-            // continue;
-        }
-        // データベースにアーカイブ後にファイルを削除する。
-        if (Storage::disk('sheets')->exists($fileName1)) {
-            Storage::disk('sheets')->delete($fileName1);
-        }
-        if (Storage::disk('sheets')->exists($fileName2)) {
-            Storage::disk('sheets')->delete($fileName2);
-        }
-        if (Storage::disk('sheets')->exists($fileName3)) {
-            Storage::disk('sheets')->delete($fileName3);
-        }
-        $this->info('Successfully command executed.');
+        // for ($i = 0; $i < 24; $i++) {
+        //     $fileNameHeadl = $i < 10 ? $fileNameHead . "0$i" : $fileNameHead . "$i";
+        //     $fileName = $fileNameHeadl . "0500.csv";
+        //     $fileName1 = $fileNameHeadl . "0501.csv";
+        //     $fileName3 = $fileNameHeadl . "0502.csv";
+        //     $fileName2 = $fileNameHeadl . "0459.csv";
+            printf("file name: %s\n", $fileName);
+            // シェルコマンドでダウンロードしたファイルにアクセスします。
+            // 存在する場合は、さらに処理します。
+            if (Storage::disk('sheets')->exists($fileName)) {
+                $this->save($fileName);
+            } else if (Storage::disk('sheets')->exists($fileName1)) {
+                $this->save($fileName1);
+            } else if (Storage::disk('sheets')->exists($fileName2)) {
+                $this->save($fileName2);
+            } else if (Storage::disk('sheets')->exists($fileName3)) {
+                $this->save($fileName3);
+            } else {
+                $this->error('Command did not execute. No such file.');
+                return 0;
+                // continue;
+            }
+            // データベースにアーカイブ後にファイルを削除する。
+            if (Storage::disk('sheets')->exists($fileName1)) {
+                Storage::disk('sheets')->delete($fileName1);
+            }
+            if (Storage::disk('sheets')->exists($fileName2)) {
+                Storage::disk('sheets')->delete($fileName2);
+            }
+            if (Storage::disk('sheets')->exists($fileName3)) {
+                Storage::disk('sheets')->delete($fileName3);
+            }
+            $this->info('Successfully command executed.');
+        // }
         return 0;
     }
     public function save($fileName)
@@ -97,7 +105,13 @@ class processAqlHourlyData extends Command
                         'requestType' => $row_data[3],
                         'requestDetail' => $row_data[4],
                     ]);
-                    $aqlHourly->save();
+                    $isSaved = aqlHourlyData::where('time',$aqlHourly->time)->where('accountName',$aqlHourly->accountName)->first();
+                    if ($isSaved) {
+                        $this->error('Already saved in database.');
+                    }
+                    else {
+                        $aqlHourly->save();
+                    }
                 }
             }
         }

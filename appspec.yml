@@ -1,0 +1,10 @@
+version: 0.0
+os: linux
+files:
+  - source: /
+    destination: /var/www/html/jet
+hooks:
+  AfterInstall:
+    - location: scripts/deploy_laravel.sh
+      timeout: 300
+      runas: root

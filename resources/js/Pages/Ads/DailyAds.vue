@@ -4,6 +4,23 @@
       <h2 class="font-semibold text-xl text-gray-800 leading-tight">
         Daily Ads Info
       </h2>
+      <div class="relative">
+        <div class="absolute -top-9 right-0 mx-2 space-x-2">
+          <!-- absolute -top-7 right-0 -->
+          <inertia-link
+            :href="route('daily-ads.fetchdaily')"
+            class="inline-block bg-indigo-500 hover:bg-indigo-400 focus:outline-none focus:ring focus:ring-offset-2 focus:ring-indigo-500 focus:ring-opacity-50 text-white px-5 py-3 hover:-translate-y-0.5 transform transition active:bg-indigo-600 rounded-lg shadow-lg uppercase tracking-wider font-semibold text-sm"
+          >
+            Add Yahoo from CSV
+          </inertia-link>
+          <inertia-link
+            :href="route('daily-ads.create')"
+            class="inline-block bg-green-500 hover:bg-green-400 focus:outline-none focus:ring focus:ring-offset-2 focus:ring-green-500 focus:ring-opacity-50 text-white px-5 py-3 hover:-translate-y-0.5 transform transition active:bg-green-600 rounded-lg shadow-lg uppercase tracking-wider font-semibold text-sm"
+          >
+            New Yahoo
+          </inertia-link>
+        </div>
+      </div>
     </template>
 
     <div class="py-8">
@@ -36,15 +53,25 @@
                       : 'hover:bg-gray-200',
                   ]"
                 >
-                  <td class="px-2">{{ data.日付 }}</td>
+                  <td class="px-2">
+                    <inertia-link
+                        :href="
+                          route('datewise-hourly-detail', {
+                            date: data.日付,
+                            accountId: data.AdsAccountId,
+                          })
+                        "
+                      >{{ data.日付 }}
+                      </inertia-link>
+                    </td>
                   <td class="px-2">{{ data.name }}</td>
                   <td class="px-2">{{ data.表示回数 }}</td>
                   <td class="px-2">{{ data.クリック数 }}</td>
-                  <td class="px-2">{{ data.クリック率 }}</td>
+                  <td class="px-2">{{ data.クリック率 }}%</td>
                   <td class="px-2">{{ formatPrice(data.クリック単価) }}</td>
                   <td class="px-2">{{ formatPrice(data.費用) }}</td>
                   <td class="px-2">{{ data.コンバージョン }}</td>
-                  <td class="px-2">{{ data.コンバージョン率 }}</td>
+                  <td class="px-2">{{ data.コンバージョン率 }}%</td>
                   <td class="px-2">{{ formatPrice(data.コンバージョン単価) }}</td>
                   <td class="px-2 flex flex-row space-x-2">
                     <inertia-link

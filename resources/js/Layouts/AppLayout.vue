@@ -29,6 +29,42 @@
                 >
                   広告アカウント
                 </jet-nav-link>
+                <jet-nav-link
+                  :href="route('daily-ads.index')"
+                  :active="route().current('daily-ads.index')"
+                >
+                  毎日の広告
+                </jet-nav-link>
+                <jet-nav-link
+                  :href="route('hourly-ads.index')"
+                  :active="route().current('hourly-ads.index')"
+                >
+                  毎時広告
+                </jet-nav-link>
+                <jet-nav-link
+                  :href="route('aql-daily-summary')"
+                  :active="route().current('aql-daily-summary')"
+                >
+                  AQL
+                </jet-nav-link>
+                <jet-nav-link
+                  :href="route('daily-summary.index')"
+                  :active="route().current('daily-summary.index')"
+                >
+                  概要
+                </jet-nav-link>
+                <jet-nav-link
+                  :href="route('sss-daily-summary')"
+                  :active="route().current('sss-daily-summary')"
+                >
+                  SSS
+                </jet-nav-link>
+                <jet-nav-link
+                  href="#"
+                  :active="route().current('sss-detail-exp')"
+                >
+                  SSS Hourly
+                </jet-nav-link>
               </div>
             </div>
 

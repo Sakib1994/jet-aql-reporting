@@ -20,4 +20,8 @@ class adsAccount extends Model
     {
         return $query->where('platform', '!=', 'all');
     }
+    public function scopeYahooAccounts($query)
+    {
+        return $query->where('platform', 'yahoo');
+    }
 }

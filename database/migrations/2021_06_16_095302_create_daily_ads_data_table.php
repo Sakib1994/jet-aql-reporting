@@ -20,11 +20,11 @@ class CreateDailyAdsDataTable extends Migration
             $table->integer('clicks');
             $table->integer('impressions');
             $table->float('ctr', 5, 2);
-            $table->float('cost', 9, 2);
-            $table->float('cpc', 6, 2);
+            $table->integer('cost');
+            $table->integer('cpc');
             $table->integer('conversions');
             $table->float('conversions_rate', 5, 2);
-            $table->float('cost_per_conversion', 8, 2);
+            $table->integer('cost_per_conversion');
             $table->timestamps();
         });
     }
