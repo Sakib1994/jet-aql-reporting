@@ -1,22 +1,17 @@
 #!/usr/bin/expect -f
 
-set filename1 [lindex $argv 0]
-set filename2 [lindex $argv 1]
-set filename3 [lindex $argv 2]
-set files [lindex $argv 3]
-
 set user "sss@ftp1.aqualine.jp"
 set password "hZuBewLvSLh1#"
 #「 アクアライン 」sftpサーバーにログインします。
 spawn sftp "$user"
 expect "assword:" { send "$password\r" }
 expect "sftp>" { send "cd hon/import\r" }
-#「アクアライン 」sftpサーバーからファイルをフェッチします。
-expect "sftp>" { send "get $files\r" }
-# ファイルを「/ done」ディレクトリに移動します。
-expect "sftp>" { send "rename $filename1 /hon/import/done/$filename1\r" }
-expect "sftp>" { send "rename $filename2 /hon/import/done/$filename2\r" }
-expect "sftp>" { send "rename $filename3 /hon/import/done/$filename3\r" }
+foreach arg $argv {
+    #「アクアライン 」sftpサーバーからファイルをフェッチします。
+    expect "sftp>" { send "get $arg\r" }
+    # ファイルを「/ done」ディレクトリに移動します。
+    expect "sftp>" { send "rename $arg /hon/import/done/$arg\r" }
+}
 expect "sftp>"
 send "exit\r";
 expect eof

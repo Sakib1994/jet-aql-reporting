@@ -15,7 +15,7 @@
     <div v-if="canLogin" class="hidden fixed top-0 right-0 px-6 py-4 sm:block">
       <inertia-link
         v-if="$page.props.user"
-        href="/dashboard"
+        :href="route('dashboard')"
         class="text-sm text-gray-700 underline"
       >
         Dashboard
@@ -71,8 +71,7 @@
                 ></path>
               </svg>
               <div class="ml-4 text-lg leading-7 font-semibold">
-                <inertia-link
-                  :href="'#'"
+                <inertia-link :href="route('aql-daily-summary')"
                   class="underline text-gray-900 dark:text-white"
                   >Aqualine Report</inertia-link
                 >
@@ -110,7 +109,7 @@
                 <path d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path>
               </svg>
               <div class="ml-4 text-lg leading-7 font-semibold">
-                <inertia-link href="#" class="underline text-gray-900 dark:text-white">SSS Report</inertia-link>
+                <inertia-link :href="route('sss-daily-summary')" class="underline text-gray-900 dark:text-white">SSS Report</inertia-link>
               </div>
             </div>
 
@@ -180,7 +179,7 @@
                   dark:text-white
                 "
               >
-                <inertia-link :href="'#'" class="underline text-gray-900 dark:text-white">Daily Incoming Call Info(Admin)</inertia-link>
+                <inertia-link :href="route('daily-summary.index')" class="underline text-gray-900 dark:text-white">Daily Summary(Admin)</inertia-link>
               </div>
             </div>
 
