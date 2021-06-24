@@ -52,9 +52,9 @@ class createAccountSummary extends Command
     public function handle()
     {
         $date = Carbon::now('Asia/Tokyo')->sub(1, 'day')->isoFormat('YYYY-MM-DD');
-        $date = '2021-06-01';
+        // $date = '2021-06-23';
         $allAccountName = adsAccount::where('platform', 'all')->first();
-        $adsAccounts = adsAccount::where('platform', '!=', 'all')->get();
+        $adsAccounts = adsAccount::IndividualAccounts()->get();
         $occarances = [];
         $sumCallsTotal = 0;
         $sumGoogleCostTotal = 0;

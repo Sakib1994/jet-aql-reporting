@@ -97,6 +97,10 @@ class DailyAdsDataController extends Controller
             "conversions_rate" => round($request->conversions_rate, 2),
             "cost_per_conversion" => $request->cost_per_conversion,
         ]);
+        $isSaved = DailyAdsData::where("AdsAccountId", $request->adsAccountId)->where('date', $request->date)->first();
+        if ($isSaved) {
+            return Redirect::route('daily-ads.index')->with('error', 'Already in Database.');
+        }
         $dailyAdsData->save();
         return Redirect::route('daily-ads.index')->with('success', 'New Yahoo ads data added.');
     }
@@ -214,11 +218,13 @@ class DailyAdsDataController extends Controller
         // ddd($dailyAdsDataArray);
         foreach ($dailyAdsDataArray as $key => $value) {
             $isSaved = DailyAdsData::where('AdsAccountId', $accountId)->where('date', "$value->date")->first();
-            if (!$isSaved) {
-                $value->save();
-            } else if ($status == "Saved successfully") {
-                $status = "Some or All Rows exist";
+            if ($isSaved) {
+                if ($status == "Saved successfully") {
+                    $status = "Some or All Rows exist";
+                }  
+                continue;
             }
+            $value->save();
         }
         Storage::disk('public')->delete("uploads/$fileName");
         return $status;

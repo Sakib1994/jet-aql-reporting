@@ -23,6 +23,7 @@
                 >
                   Dashboard
                 </jet-nav-link>
+                <template v-if="$page.props.auth.role.name === 'admin' ">
                 <jet-nav-link
                   :href="route('ads-accounts.index')"
                   :active="route().current('ads-accounts.index')"
@@ -42,17 +43,32 @@
                   毎時広告
                 </jet-nav-link>
                 <jet-nav-link
-                  :href="route('aql-daily-summary')"
-                  :active="route().current('aql-daily-summary')"
-                >
-                  AQL
-                </jet-nav-link>
-                <jet-nav-link
                   :href="route('daily-summary.index')"
                   :active="route().current('daily-summary.index')"
                 >
                   概要
                 </jet-nav-link>
+                </template>
+                <template
+                  v-if="
+                    $page.props.auth.role.name === 'admin' ||
+                    $page.props.auth.role.name === 'aql'
+                  "
+                >
+                  <jet-nav-link
+                    :href="route('aql-daily-summary')"
+                    :active="route().current('aql-daily-summary')"
+                  >
+                    AQL
+                  </jet-nav-link>
+                </template>
+                
+                <template
+                  v-if="
+                    $page.props.auth.role.name === 'admin' ||
+                    $page.props.auth.role.name === 'sss'
+                  "
+                >
                 <jet-nav-link
                   :href="route('sss-daily-summary')"
                   :active="route().current('sss-daily-summary')"
@@ -65,6 +81,7 @@
                 >
                   SSS Hourly
                 </jet-nav-link>
+                </template>
               </div>
             </div>
 

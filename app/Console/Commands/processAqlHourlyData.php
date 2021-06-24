@@ -42,19 +42,19 @@ class processAqlHourlyData extends Command
     {
         // 可能なファイル名を作成します。
         $fileNameHead = "SSS" . Carbon::now('Asia/Tokyo')->isoFormat('YYYYMMDDHH');
-        // $fileNameHead = "SSS2021060109";
+        $fileNameHead = "SSS20210623";
         $fileName = $fileNameHead . "0500.csv";
         $fileName1 = $fileNameHead . "0459.csv";
         $fileName2 = $fileNameHead . "0501.csv";
         $fileName3 = $fileNameHead . "0502.csv";
         $fileName4 = $fileNameHead . "2125.csv";
-        // for ($i = 0; $i < 24; $i++) {
-        //     $fileNameHeadl = $i < 10 ? $fileNameHead . "0$i" : $fileNameHead . "$i";
-        //     $fileName = $fileNameHeadl . "0500.csv";
-        //     $fileName1 = $fileNameHeadl . "0501.csv";
-        //     $fileName3 = $fileNameHeadl . "0502.csv";
-        //     $fileName2 = $fileNameHeadl . "0459.csv";
-            
+        for ($i = 0; $i < 24; $i++) {
+            $fileNameHeadl = $i < 10 ? $fileNameHead . "0$i" : $fileNameHead . "$i";
+            $fileName = $fileNameHeadl . "0500.csv";
+            $fileName1 = $fileNameHeadl . "0501.csv";
+            $fileName3 = $fileNameHeadl . "0502.csv";
+            $fileName2 = $fileNameHeadl . "0459.csv";
+            $fileName4 = $fileNameHeadl . "2125.csv";
             // シェルコマンドでダウンロードしたファイルにアクセスします。
             // 存在する場合は、さらに処理します。
             if (Storage::disk('sheets')->exists($fileName)) {
@@ -77,8 +77,8 @@ class processAqlHourlyData extends Command
             } 
             else {
                 $this->error('Command did not execute. No such file.');
-                return 0;
-                // continue;
+                // return 0;
+                continue;
             }
             // データベースにアーカイブ後にファイルを削除する。
             if (Storage::disk('sheets')->exists($fileName1)) {
@@ -91,7 +91,7 @@ class processAqlHourlyData extends Command
                 Storage::disk('sheets')->delete($fileName3);
             }
             $this->info('Successfully command executed.');
-        // }
+        }
         return 0;
     }
     public function save($fileName)
