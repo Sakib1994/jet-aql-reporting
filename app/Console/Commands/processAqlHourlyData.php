@@ -54,20 +54,25 @@ class processAqlHourlyData extends Command
         //     $fileName1 = $fileNameHeadl . "0501.csv";
         //     $fileName3 = $fileNameHeadl . "0502.csv";
         //     $fileName2 = $fileNameHeadl . "0459.csv";
-            printf("file name: %s\n", $fileName);
+            
             // シェルコマンドでダウンロードしたファイルにアクセスします。
             // 存在する場合は、さらに処理します。
             if (Storage::disk('sheets')->exists($fileName)) {
+                printf("file name: %s\n", $fileName);
                 $this->save($fileName);
             } else if (Storage::disk('sheets')->exists($fileName1)) {
+                printf("file name: %s\n", $fileName1);
                 $this->save($fileName1);
             } else if (Storage::disk('sheets')->exists($fileName2)) {
+                printf("file name: %s\n", $fileName2);
                 $this->save($fileName2);
             } 
             else if (Storage::disk('sheets')->exists($fileName3)) {
+                printf("file name: %s\n", $fileName3);
                 $this->save($fileName3);
             } 
             else if (Storage::disk('sheets')->exists($fileName4)) {
+                printf("file name: %s\n", $fileName4);
                 $this->save($fileName4);
             } 
             else {
