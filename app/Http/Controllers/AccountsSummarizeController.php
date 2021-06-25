@@ -9,17 +9,16 @@ use App\Models\DailyAdsData;
 use App\Models\HourlyAdsData;
 use Carbon\Carbon;
 use Carbon\CarbonPeriod;
-use Illuminate\Http\Request;
-use Inertia\Inertia;
 use Google\Ads\GoogleAds\Lib\OAuth2TokenBuilder;
 use Google\Ads\GoogleAds\Lib\V7\GoogleAdsClient;
 use Google\Ads\GoogleAds\Lib\V7\GoogleAdsClientBuilder;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redirect;
-use PhpParser\Node\Expr\Cast\Object_;
+use Inertia\Inertia;
 
 class AccountsSummarizeController extends Controller
 {
@@ -30,13 +29,14 @@ class AccountsSummarizeController extends Controller
      */
     public function index(Request $request)
     {
-        // ddd($request->startDate,$request->endDate);
         $begin = new Carbon('first day of this month');
         $begin = $begin->isoFormat('YYYY-MM-DD');
         $end = new Carbon('yesterday');
         $end = $end->isoFormat('YYYY-MM-DD');
-        // $begin = '2021-06-01';
-        // $end = '2021-06-02';
+        if ($request->startDate && $request->endDate) {
+            $begin = $request->startDate;
+            $end = $request->endDate;
+        }
         $period = CarbonPeriod::create($begin, $end);
         $dailyDatas = [];
         $uniqueAccounts = array_unique(adsAccount::where('platform', '!=', 'all')->get()->pluck('name')->all());
@@ -47,28 +47,28 @@ class AccountsSummarizeController extends Controller
         $allAccountDaily = [];
         foreach ($period as $date) {
             $filtered = $this->filter_by_value($accountsSummary, 'date', $date->format('Y-m-d'));
-            if (!$filtered) {
-                $filtered = new AccountsSummarize([
-                    "date" => $date->format('Y-m-d'),
-                    "accountName" => $allAccountName,
-                    "yahooAds" => 0.0,
-                    "googleAds" => 0.0,
-                    "total" => 0.0,
-                    "budget" => 600000.0,
-                    "numberOfCalls" => 0,
-                    "costPerCall" => 0,
-                ]);
+            if ($filtered) {
+                $allAccountDaily[$date->format('Y-m-d')] = $filtered;
             }
-            $allAccountDaily[$date->format('Y-m-d')] = $filtered;
         }
         $dailyDatas[$allAccountName] = $allAccountDaily;
-        $myCollectionObj = collect($allAccountDaily);
-
-        $allAccountDaily = $this->paginate($myCollectionObj)->withPath('/daily-summary');
-        // ddd($allAccountDaily);
-        
+        $uniqueAccounts = array_unique(adsAccount::where('platform', '!=', 'all')->get()->pluck('name')->all());
+        foreach ($uniqueAccounts as $key => $value) {
+            $accountwiseDaily = [];
+            $accountsSummary = AccountsSummarize::where('accountName', $value)
+                ->where('date', '>=', $begin)
+                ->where('date', '<=', $end)->get();
+            foreach ($period as $date) {
+                $filtered = $this->filter_by_value($accountsSummary, 'date', $date->format('Y-m-d'));
+                if ($filtered) {
+                    $accountwiseDaily[$date->format('Y-m-d')] = $filtered;
+                }
+            }
+            $dailyDatas[$value] = $accountwiseDaily;
+        }
         return Inertia::render('DailySummary/Index', [
-            "dailyDatas" => $allAccountDaily,
+            "accounts"=>$uniqueAccounts,
+            "dailyDatas" => $dailyDatas,
         ]);
     }
     public function paginate($items, $perPage = 15, $page = null, $options = [])
@@ -131,7 +131,7 @@ class AccountsSummarizeController extends Controller
         $end = new Carbon('today');
         $end = $end->isoFormat('YYYY-MM-DD');
         $today = Carbon::now()->isoFormat('YYYY-MM-DD');
-        
+
         $adsAccounts = adsAccount::where('platform', '!=', 'all')->get();
         $occarances = $this->processedAccountArray($adsAccounts);
         // ddd($occarances);
@@ -174,10 +174,10 @@ class AccountsSummarizeController extends Controller
         }
         if ($today) {
             $googleTotalCost = 0;
-            $oAuth2Credential = (new OAuth2TokenBuilder())->fromFile('/var/www/html/testJob/google_ads_php.ini')->build();
+            $oAuth2Credential = (new OAuth2TokenBuilder())->fromFile('/var/www/html/jet/google_ads_php.ini')->build();
             // $oAuth2Credential = (new OAuth2TokenBuilder())->fromFile()->build();
-            
-            $googleAdsClient = (new GoogleAdsClientBuilder())->fromFile('/var/www/html/testJob/google_ads_php.ini')
+
+            $googleAdsClient = (new GoogleAdsClientBuilder())->fromFile('/var/www/html/jet/google_ads_php.ini')
             // $googleAdsClient = (new GoogleAdsClientBuilder())->fromFile()
                 ->withOAuth2Credential($oAuth2Credential)
                 ->withLoginCustomerId(4387461648)
@@ -198,8 +198,8 @@ class AccountsSummarizeController extends Controller
                 "googleAds" => $googleTotalCost * 1.05 * 1.2,
                 "total" => $googleTotalCost * 1.05 * 1.2,
                 "budget" => 2300000,
-                "numberOfCalls" => $dailyCallNumber>0?$dailyCallNumber:0,
-                "costPerCall" => $dailyCallNumber>0?round($googleTotalCost * 1.05 * 1.2 / $dailyCallNumber):0,
+                "numberOfCalls" => $dailyCallNumber > 0 ? $dailyCallNumber : 0,
+                "costPerCall" => $dailyCallNumber > 0 ? round($googleTotalCost * 1.05 * 1.2 / $dailyCallNumber) : 0,
             ]);
             $allAccountDaily[$today] = $filtered;
         }
@@ -232,8 +232,8 @@ class AccountsSummarizeController extends Controller
                 $numberOfCall = 0;
                 $dailyCallNumber = aqlHourlyData::where('time', 'LIKE', "$today%")->count();
                 foreach ($dailyGoogleDatas as $key => $googleData) {
-                    if ($value==$googleData->AdsAccount) {
-                        $cost=$googleData->cost;
+                    if ($value == $googleData->AdsAccount) {
+                        $cost = $googleData->cost;
                     }
                 }
                 if ($cost != 0 && intval($numberOfCall) != 0) {
@@ -497,7 +497,7 @@ class AccountsSummarizeController extends Controller
             if ($today) {
                 $googleAccounts = isset($value['google']) ? HourlyAdsData::where('time', 'LIKE', "$today%")->where('AdsAccountId', $value['google']) : null;
                 $yahooAccounts = isset($value['yahoo']) ? HourlyAdsData::where('time', 'LIKE', "$today%")->where('AdsAccountId', $value['yahoo']) : null;
-                $hourlyCalls = $dailyCallNumber = aqlHourlyData::where('time', 'LIKE', "$today%")->where('accountName', $value['aqlName'])->count();;
+                $hourlyCalls = $dailyCallNumber = aqlHourlyData::where('time', 'LIKE', "$today%")->where('accountName', $value['aqlName'])->count();
 
                 if ($googleAccounts && $yahooAccounts) {
                     $accountwiseDaily[$today] = [
@@ -588,7 +588,7 @@ class AccountsSummarizeController extends Controller
             }
             $occarance = [];
             $occarance['name'] = $value->name;
-             $occarance['aqlName']=$value->aqlName;
+            $occarance['aqlName'] = $value->aqlName;
             if ($platform == "yahoo") {
                 $occarance['yahoo'] = $value->id;
             } else {
@@ -641,7 +641,6 @@ class AccountsSummarizeController extends Controller
         for ($i = 0; $i < 24; $i++) {
             $hour = $i < 10 ? "0$i" : "$i";
             $hourUpperLimit = $i < 9 ? "0" . ($i + 1) : "" . ($i + 1);
-            $hourUpperLimit = $i == 9 ? "10" : $hourUpperLimit;
             $cost = 0;
             $clicks = 0;
             $impressions = 0;
@@ -652,7 +651,7 @@ class AccountsSummarizeController extends Controller
             $costPerConv = 0;
             $count = 0;
             foreach ($hourlyAdsQuery->get() as $key => $value) {
-                if (str_contains($value->time, "$date $hour")) {
+                if (str_contains($value->time, "$date $hourUpperLimit")) {
                     $cost += $value->cost;
                     $clicks += $value->clicks;
                     $impressions += $value->impressions;
@@ -704,9 +703,6 @@ class AccountsSummarizeController extends Controller
                 $googleHourlyInfo = null;
                 $yahooHourlyInfo = null;
                 $hourUpperLimit = $i < 9 ? "0" . ($i + 1) : "" . ($i + 1);
-                // $hourUpperLimit = $i == 9 ? "10" : $hourUpperLimit;
-                // $hourLowerLimit = $i < 10 ? "0" . ($i - 1) : "" . ($i - 1);
-                // $hourLowerLimit = $i == 10 ? "09" : $hourLowerLimit;
                 if ($googleHourlyInfoAll) {
                     foreach ($googleHourlyInfoAll as $key => $value) {
                         if (str_contains($value->time, "$date $hourUpperLimit")) {
@@ -844,10 +840,10 @@ class AccountsSummarizeController extends Controller
      */
     public function edit(int $accountsSummarizeId)
     {
-        $accountsSummarize=AccountsSummarize::find($accountsSummarizeId);
+        $accountsSummarize = AccountsSummarize::find($accountsSummarizeId);
         // ddd($accountsSummarize);
         return Inertia::render('DailySummary/Edit', [
-            'accountsSummarize' => $accountsSummarize
+            'accountsSummarize' => $accountsSummarize,
         ]);
     }
 
