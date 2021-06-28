@@ -42,8 +42,7 @@ class HourlyAdsDataController extends Controller
         }
         $myCollectionObj = collect($formatedAllAccounts);
 
-        $formatedAllAccounts = $this->paginate($myCollectionObj)->withPath('/hourly-ads');
-        // ddd($formatedAllAccounts);
+        $formatedAllAccounts = $this->paginate($myCollectionObj)->withPath(route('hourly-ads.index'));
         return Inertia::render('Ads/HourlyAds', [
             "hourlyAds" => $formatedAllAccounts,
         ]);

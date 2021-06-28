@@ -42,7 +42,7 @@ class DailyAdsDataController extends Controller
         }
         // ddd($formatedAllAccounts);
         $myCollectionObj = collect($formatedAllAccounts);
-        $formatedAllAccounts = $this->paginate($myCollectionObj)->withPath('/daily-ads');
+        $formatedAllAccounts = $this->paginate($myCollectionObj)->withPath(route('daily-ads.index'));
         return Inertia::render('Ads/DailyAds', [
             "dailyAds" => $formatedAllAccounts,
         ]);
