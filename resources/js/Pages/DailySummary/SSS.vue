@@ -164,7 +164,7 @@
                     <td class="px-1">
                       <inertia-link
                         :href="
-                          route('sss-detail-exp', {
+                          route('sss-detail-from-api', {
                             date: account.日付,
                           })
                         "

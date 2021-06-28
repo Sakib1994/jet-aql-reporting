@@ -67,7 +67,7 @@ class AccountsSummarizeController extends Controller
             $dailyDatas[$value] = $accountwiseDaily;
         }
         return Inertia::render('DailySummary/Index', [
-            "accounts"=>$uniqueAccounts,
+            "accounts" => $uniqueAccounts,
             "dailyDatas" => $dailyDatas,
         ]);
     }
@@ -574,29 +574,7 @@ class AccountsSummarizeController extends Controller
     {
         $hourlyDatas = [];
         $adsAccounts = AdsAccount::IndividualAccounts()->get();
-        $uniqueAccounts = [];
-        foreach ($adsAccounts as $key => $value) {
-            $isSaved = $this->searchThrouhArray($uniqueAccounts, $value->name);
-            $platform = $value->platform;
-            if ($isSaved != 1000) {
-                if ($platform == "google") {
-                    $uniqueAccounts[$isSaved]['google'] = $value->id;
-                } else {
-                    $uniqueAccounts[$isSaved]['yahoo'] = $value->id;
-                }
-                continue;
-            }
-            $occarance = [];
-            $occarance['name'] = $value->name;
-            $occarance['aqlName'] = $value->aqlName;
-            if ($platform == "yahoo") {
-                $occarance['yahoo'] = $value->id;
-            } else {
-                $occarance['google'] = $value->id;
-            }
-            array_push($uniqueAccounts, $occarance);
-        }
-
+        $uniqueAccounts = $this->processedAccountArray($adsAccounts);
         $aqlHourlyDataQuery = aqlHourlyData::where('time', 'like', "$date%")->get();
         $prefectures = array_count_values($aqlHourlyDataQuery->pluck('prefecture')->all());
         $requestTypes = array_count_values($aqlHourlyDataQuery->pluck('requestType')->all());
@@ -605,16 +583,6 @@ class AccountsSummarizeController extends Controller
             'prefectures' => $prefectures,
             'requestTypes' => $requestTypes,
             'requestDetails' => $requestDetails,
-        ];
-        $mappingArray = [
-            '水道救急365' => '水道救急365',
-            '水まわりの救急24' => '救急２４',
-            '99クイック' => '救急クイック',
-            '99109' => '救急トッキュー',
-            '99110' => '救急修理隊',
-            '救急119' => '救急119番',
-            '99kanto' => '関東水トラブル救急センター',
-            '水道屋本舗' => '水道屋本舗',
         ];
         $hourlyAdsQuery = HourlyAdsData::where('time', 'like', "$date%");
         if ($request->input('prefecture')) {
@@ -872,5 +840,301 @@ class AccountsSummarizeController extends Controller
     public function destroy(AccountsSummarize $accountsSummarize)
     {
         //
+    }
+    public function fetchHourlyFromApi(GoogleAdsClient $googleAdsClient, int $customerId, int $accountId)
+    {
+        $hourlyDatas = [];
+        $getTheNow = Carbon::now('+8:30');
+        $date = $getTheNow->isoFormat('YYYY-MM-DD');
+        $hournow = $getTheNow->isoFormat('YYYY-MM-DD HH:00:00');
+        $hourtoSave = $getTheNow->sub(1, 'hour')->isoFormat('HH');
+        $googleAdsServiceClient = $googleAdsClient->getGoogleAdsServiceClient();
+        // これは特別なクエリ言語ですGAQL.dataはこれを使用してグーグルからフェッチされます。
+        $queryFromBuider = "SELECT customer.descriptive_name, segments.hour, metrics.clicks, metrics.ctr, metrics.impressions, metrics.conversions, metrics.average_cpc, metrics.cost_per_conversion, metrics.cost_micros, metrics.conversions_from_interactions_rate FROM customer WHERE segments.date = '$date'";
+        $response = $googleAdsServiceClient->search($customerId, $queryFromBuider, ['pageSize' => self::PAGE_SIZE]);
+        // APIからデータをループして、データを取得します。
+        foreach ($response->iterateAllElements() as $googleAdsRow) {
+            if ($googleAdsRow->getMetrics()->getClicks() == 0) {
+                continue;
+            }
+            $time = $googleAdsRow->getSegments()->getHour() < 9 ? "0" . ($googleAdsRow->getSegments()->getHour() + 1) : ($googleAdsRow->getSegments()->getHour() + 1);
+            // グーグルから毎時データを取得し、データベースに保存します。
+            $hourlyAdsData = new HourlyAdsData([
+                "AdsAccountId" => $accountId,
+                "time" => "$date $time:00",
+                "clicks" => $googleAdsRow->getMetrics()->getClicks(),
+                "impressions" => $googleAdsRow->getMetrics()->getImpressions(),
+                "ctr" => round($googleAdsRow->getMetrics()->getCtr() * 100, 2),
+                "cost" => round($googleAdsRow->getMetrics()->getCostMicros() / 1000000),
+                "cpc" => round($googleAdsRow->getMetrics()->getAverageCpc() / 1000000),
+                "conversions" => $googleAdsRow->getMetrics()->getConversions(),
+                "conversions_rate" => round($googleAdsRow->getMetrics()->getConversionsFromInteractionsRate() * 100, 2),
+                "cost_per_conversion" => round($googleAdsRow->getMetrics()->getCostPerConversion() / 1000000),
+            ]);
+            $hourlyDatas["$date $time:00:00"] = $hourlyAdsData;
+        }
+        return $hourlyDatas;
+    }
+    public function dateWise(Request $request, $date)
+    {
+        $adsAccounts = AdsAccount::IndividualAccounts()->get();
+        $uniqueAccounts = $this->processedAccountArray($adsAccounts);
+        $aqlHourlyDataQuery = aqlHourlyData::where('time', 'like', "$date%")->get();
+        $prefectures = array_count_values($aqlHourlyDataQuery->pluck('prefecture')->all());
+        $requestTypes = array_count_values($aqlHourlyDataQuery->pluck('requestType')->all());
+        $requestDetails = array_count_values($aqlHourlyDataQuery->pluck('requestDetail')->all());
+        $aqlHourlyData = [
+            'prefectures' => $prefectures,
+            'requestTypes' => $requestTypes,
+            'requestDetails' => $requestDetails,
+        ];
+        $today = Carbon::now()->isoFormat('YYYY-MM-DD');
+        $hourlyAdsQuery = HourlyAdsData::where('time', 'like', "$date%");
+        $houlyAdsToday = [];
+        if ($date == $today) {
+            $googleTotalCost = 0;
+            $oAuth2Credential = (new OAuth2TokenBuilder())->fromFile('/var/www/html/jet/google_ads_php.ini')->build();
+
+            $googleAdsClient = (new GoogleAdsClientBuilder())->fromFile('/var/www/html/jet/google_ads_php.ini')
+                ->withOAuth2Credential($oAuth2Credential)
+                ->withLoginCustomerId(4387461648)
+                ->build();
+            $accountIds = AdsAccount::select("id", "accountId", "name")->where('platform', 'google')->get();
+            foreach ($accountIds as $account) {
+                if ($this->fetchHourlyFromApi($googleAdsClient, $account->accountId, $account->id)) {
+                    // ddd($this->fetchHourlyFromApi($googleAdsClient, $account->accountId, $account->id));
+                    $houlyAdsToday[$account->name] = $this->fetchHourlyFromApi($googleAdsClient, $account->accountId, $account->id);
+                }
+            }
+            // ddd($houlyAdsToday);
+        }
+        if ($request->input('prefecture')) {
+            $filteredAll = aqlHourlyData::select(DB::raw("count(*) as total"))
+                ->where('time', 'LIKE', "$date%")
+                ->where('prefecture', $request->input('prefecture'));
+        } elseif ($request->input('type')) {
+            $filteredAll = aqlHourlyData::select(DB::raw("hour(time) as hour, count(*) as total"))
+                ->where('time', 'LIKE', "$date%")
+                ->where('requestType', $request->input('type'));
+        } elseif ($request->input('adsPlatform')) {
+            $filteredAll = aqlHourlyData::select(DB::raw("hour(time) as hour, count(*) as total"))
+                ->where('time', 'LIKE', "$date%");
+            $selectedAccounts = AdsAccount::where('platform', $request->input('adsPlatform'))->get()->pluck('id')->all();
+            $hourlyAdsQuery = HourlyAdsData::where('time', 'like', "$date%")->whereIn('AdsAccountId', $selectedAccounts);
+        } else {
+            $filteredAll = aqlHourlyData::select(DB::raw("hour(time) as hour, count(*) as total"))
+                ->where('time', 'LIKE', "$date%")
+                ->groupBy(DB::raw('hour(time)'));
+        }
+        $allAqlAccountsData = [];
+        $aqlDataAllAccounts = $filteredAll->get()->pluck('total', 'hour')->all();
+        // ddd($aqlDataAllAccounts,$date);
+        for ($i = 0; $i < 24; $i++) {
+            $hour = $i < 10 ? "0$i" : "$i";
+            $hourUpperLimit = $i < 9 ? "0" . ($i + 1) : "" . ($i + 1);
+            $cost = 0;
+            $clicks = 0;
+            $impressions = 0;
+            $ctr = 0;
+            $cpc = 0;
+            $conv = 0;
+            $convRate = 0;
+            $costPerConv = 0;
+            $count = 0;
+            if ($date == $today) {
+                foreach ($houlyAdsToday as $key => $individualAccount) {
+                    foreach ($individualAccount as $key => $value) {
+                        if (str_contains($key, "$date $hourUpperLimit")) {
+                            $cost += $value->cost;
+                            $clicks += $value->clicks;
+                            $impressions += $value->impressions;
+                            $ctr += $value->ctr;
+                            $cpc += $value->cpc;
+                            $conv += $value->conversions;
+                            $convRate += $value->conversions_rate;
+                            $costPerConv += $value->cost_per_conversion;
+                            $count++;
+                        }
+                    }
+                }
+                $ctr = $count > 0 ? round($ctr / $count, 2) : 0;
+                $cpc = $count > 0 ? round($cpc / $count) : 0;
+                $convRate = $count > 0 ? round($convRate / $count, 2) : 0;
+                $costPerConv = $count > 0 ? round($costPerConv / $count) : 0;
+
+            } else {
+                foreach ($hourlyAdsQuery->get() as $key => $value) {
+                    if (str_contains($value->time, "$date $hourUpperLimit")) {
+                        $cost += $value->cost;
+                        $clicks += $value->clicks;
+                        $impressions += $value->impressions;
+                        $ctr += $value->ctr;
+                        $cpc += $value->cpc;
+                        $conv += $value->conversions;
+                        $convRate += $value->conversions_rate;
+                        $costPerConv += $value->cost_per_conversion;
+                        $count++;
+                    }
+                }
+                $ctr = $count > 0 ? round($ctr / $count, 2) : 0;
+                $cpc = $count > 0 ? round($cpc / $count) : 0;
+                $convRate = $count > 0 ? round($convRate / $count, 2) : 0;
+                $costPerConv = $count > 0 ? round($costPerConv / $count) : 0;
+            }
+            $hourlyData = [
+                '時間' => "$hour:00 - $hourUpperLimit:00",
+                '入電数' => isset($aqlDataAllAccounts[$i]) ? $aqlDataAllAccounts[$i] : 0,
+                '入電単価' => isset($aqlDataAllAccounts[$i]) && $cost > 0 ? round($cost / $aqlDataAllAccounts[$i]) : 0,
+                '表示回数' => $impressions > 0 ? $impressions : 0,
+                'クリック数' => $clicks > 0 ? $clicks : 0,
+                'クリック率' => $ctr > 0 ? round($ctr, 2) : 0,
+                'クリック単価' => $cpc > 0 ? round($cpc) : 0,
+                '費用' => $cost > 0 ? round($cost) : 0,
+                'コンバージョン' => $conv > 0 ? $conv : 0,
+                'コンバージョン率' => $convRate > 0 ? round($convRate, 2) : 0,
+                'コンバージョン単価' => $costPerConv > 0 ? round($costPerConv) : 0,
+            ];
+            $allAqlAccountsData[$i] = $hourlyData;
+        }
+        $dailyDatas['全部'] = $allAqlAccountsData;
+        $aqlHourlyCallCount = aqlHourlyData::select(DB::raw("hour(time) as hour, count(*) as total"))
+            ->where('time', 'LIKE', "$date%")
+            ->groupBy(DB::raw('hour(time)'));
+        $allAqlAccountsDataHolder = [];
+        $aqlDataAllAccounts = $aqlHourlyCallCount->get()->pluck('total', 'hour')->all();
+        // ddd($uniqueAccounts);
+        foreach ($uniqueAccounts as $key => $singleAccount) {
+            $accountwiseHourly = [];
+            $accountAdsInfo=null;
+            $filtered = aqlHourlyData::select(DB::raw("hour(time) as hour, count(*) as total"))
+                ->where('time', 'LIKE', "$date%")
+                ->where('accountName', $singleAccount['aqlName'])
+                ->groupBy(DB::raw('hour(time)'))
+                ->get()->pluck('total', 'hour')->all();
+            $googleHourlyInfoAll = isset($singleAccount['google']) ? AdsAccount::find($singleAccount['google'])->hourlyAdsDatas()->where('time', 'like', "$date%")->get() : null;
+            $yahooHourlyInfoAll = isset($singleAccount['yahoo']) ? AdsAccount::find($singleAccount['yahoo'])->hourlyAdsDatas()->where('time', 'like', "$date%")->get() : null;
+            if ($date == $today) {
+                $accountAdsInfo = isset($houlyAdsToday[$singleAccount['name']])?$houlyAdsToday[$singleAccount['name']]:null;
+            }
+            for ($i = 0; $i < 24; $i++) {
+                $hour = $i < 10 ? "0$i" : "$i";
+                $googleHourlyInfo = null;
+                $yahooHourlyInfo = null;
+                $hourUpperLimit = $i < 9 ? "0" . ($i + 1) : "" . ($i + 1);
+                if ($googleHourlyInfoAll) {
+                    foreach ($googleHourlyInfoAll as $key => $value) {
+                        if (str_contains($value->time, "$date $hourUpperLimit")) {
+                            $googleHourlyInfo = $value;
+                        }
+                    }
+                }
+                if ($yahooHourlyInfoAll) {
+                    foreach ($yahooHourlyInfoAll as $key => $value) {
+                        if (str_contains($value->time, "$date $hour")) {
+                            $yahooHourlyInfo = $value;
+                        }
+                    }
+                }
+                $aqlData = isset($filtered[$i]) ? $filtered[$i] : 0;
+                $cost = 0;
+                $clicks = 0;
+                $impressions = 0;
+                $ctr = 0;
+                $cpc = 0;
+                $conv = 0;
+                $convRate = 0;
+                $costPerConv = 0;
+                if ($date == $today && $accountAdsInfo) {
+                    foreach ($accountAdsInfo as $key => $value) {
+                        // ddd($key);
+                        if (str_contains($key, "$date $hourUpperLimit")) {
+                            $cost += $value->cost;
+                            $clicks += $value->clicks;
+                            $impressions += $value->impressions;
+                            $ctr += $value->ctr;
+                            $cpc += $value->cpc;
+                            $conv += $value->conversions;
+                            $convRate += $value->conversions_rate;
+                            $costPerConv += $value->cost_per_conversion;
+                            $count++;
+                        }
+                    }
+                    $ctr = $count > 0 ? round($ctr / $count, 2) : 0;
+                    $cpc = $count > 0 ? round($cpc / $count) : 0;
+                    $convRate = $count > 0 ? round($convRate / $count, 2) : 0;
+                    $costPerConv = $count > 0 ? round($costPerConv / $count) : 0;
+                } else if ($request->input('adsPlatform')) {
+                    if ($googleHourlyInfo && $request->input('adsPlatform') == 'google') {
+                        $cost = $googleHourlyInfo->cost;
+                        $clicks = $googleHourlyInfo->clicks;
+                        $impressions = $googleHourlyInfo->impressions;
+                        $ctr = $googleHourlyInfo->ctr;
+                        $cpc = $googleHourlyInfo->cpc;
+                        $conv = $googleHourlyInfo->conversions;
+                        $convRate = $googleHourlyInfo->conversions_rate;
+                        $costPerConv = $googleHourlyInfo->cost_per_conversion;
+                    } else if ($yahooHourlyInfo && $request->input('adsPlatform') == 'yahoo') {
+                        $cost = $yahooHourlyInfo->cost;
+                        $clicks = $yahooHourlyInfo->clicks;
+                        $impressions = $yahooHourlyInfo->impressions;
+                        $ctr = $yahooHourlyInfo->ctr;
+                        $cpc = $yahooHourlyInfo->cpc;
+                        $conv = $yahooHourlyInfo->conversions;
+                        $convRate = $yahooHourlyInfo->conversions_rate;
+                        $costPerConv = $yahooHourlyInfo->cost_per_conversion;
+                    }
+                } else {
+                    if ($googleHourlyInfo && $yahooHourlyInfo) {
+                        $cost = $googleHourlyInfo->cost + $yahooHourlyInfo->cost;
+                        $clicks = $googleHourlyInfo->clicks + $yahooHourlyInfo->clicks;
+                        $impressions = $googleHourlyInfo->impressions + $yahooHourlyInfo->impressions;
+                        $ctr = ($googleHourlyInfo->ctr + $yahooHourlyInfo->ctr) / 2;
+                        $cpc = ($googleHourlyInfo->cpc + $yahooHourlyInfo->cpc) / 2;
+                        $conv = $googleHourlyInfo->conversions + $yahooHourlyInfo->conversions;
+                        $convRate = ($googleHourlyInfo->conversions_rate + $yahooHourlyInfo->conversions_rate) / 2;
+                        $costPerConv = ($googleHourlyInfo->cost_per_conversion + $yahooHourlyInfo->cost_per_conversion) / 2;
+                    } else if ($googleHourlyInfo) {
+                        $cost = $googleHourlyInfo->cost;
+                        $clicks = $googleHourlyInfo->clicks;
+                        $impressions = $googleHourlyInfo->impressions;
+                        $ctr = $googleHourlyInfo->ctr;
+                        $cpc = $googleHourlyInfo->cpc;
+                        $conv = $googleHourlyInfo->conversions;
+                        $convRate = $googleHourlyInfo->conversions_rate;
+                        $costPerConv = $googleHourlyInfo->cost_per_conversion;
+                    } else if ($yahooHourlyInfo) {
+                        $cost = $yahooHourlyInfo->cost;
+                        $clicks = $yahooHourlyInfo->clicks;
+                        $impressions = $yahooHourlyInfo->impressions;
+                        $ctr = $yahooHourlyInfo->ctr;
+                        $cpc = $yahooHourlyInfo->cpc;
+                        $conv = $yahooHourlyInfo->conversions;
+                        $convRate = $yahooHourlyInfo->conversions_rate;
+                        $costPerConv = $yahooHourlyInfo->cost_per_conversion;
+                    }
+                }
+                $hourlyData = [
+                    '時間' => "$hour:00 - $hourUpperLimit:00",
+                    '入電数' => $aqlData,
+                    '入電単価' => $aqlData > 0 ? round($cost / $aqlData, 2) : 0,
+                    '表示回数' => $impressions,
+                    'クリック数' => $clicks,
+                    'クリック率' => round($ctr, 2),
+                    'クリック単価' => round($cpc, 2),
+                    '費用' => round($cost),
+                    'コンバージョン' => round($conv),
+                    'コンバージョン率' => round($convRate, 2),
+                    'コンバージョン単価' => round($costPerConv),
+                ];
+                $accountwiseHourly[$i] = $hourlyData;
+            }
+            $dailyDatas[$singleAccount['name']] = $accountwiseHourly;
+        }
+        return Inertia::render('DailySummary/SSSdetailExp', [
+            "aqlHourlyData" => $aqlHourlyData,
+            "accounts" => array_unique($adsAccounts->pluck('name')->all()),
+            "hourlyDatas" => $dailyDatas,
+            'table_header' => ["$date", '入電数', '入電単価', '表示回数', 'クリック数', 'クリック率', 'クリック単価', '費用', 'コンバージョン', 'コンバージョン率', 'コンバージョン単価'],
+        ]);
     }
 }

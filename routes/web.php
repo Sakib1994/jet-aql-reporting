@@ -35,6 +35,7 @@ Route::middleware(['auth:sanctum', 'verified'])->get('/dashboard', function () {
 Route::group(['middleware' => ['auth', 'role:sss|admin']], function () {
     Route::get('/sss-daily-summary/{startDate?}/{endDate?}', [AccountsSummarizeController::class, 'processSSS'])->name('sss-daily-summary');
     Route::get('/sss-detail/{date}', [AccountsSummarizeController::class, 'datewiseExperiment'])->name('sss-detail-exp');
+    Route::get('/sss-detail-api/{date}', [AccountsSummarizeController::class, 'datewise'])->name('sss-detail-from-api');
 });
 Route::group(['middleware' => ['auth', 'role:aql|admin']], function () {
     Route::get('/aql-daily-summary/{startDate?}/{endDate?}', [AccountsSummarizeController::class, 'aqlProcress'])->name('aql-daily-summary');
