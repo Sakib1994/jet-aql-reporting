@@ -59,7 +59,7 @@
                     :href="route('aql-daily-summary')"
                     :active="route().current('aql-daily-summary')"
                   >
-                    AQL
+                    アクアライン
                   </jet-nav-link>
                 </template>
                 
@@ -79,7 +79,7 @@
                   href="#"
                   :active="route().current('sss-detail-exp')"
                 >
-                  SSS Hourly
+                  毎時SSS
                 </jet-nav-link>
                 </template>
               </div>

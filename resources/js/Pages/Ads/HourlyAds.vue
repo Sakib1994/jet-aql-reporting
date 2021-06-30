@@ -20,6 +20,57 @@
     <div class="py-8">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+<div class="flex w-full h-12 space-x-2 justify-end pr-4">
+            <div class="mt-4 space-x-2">
+              <input
+                class="border border-grey-300 rounded-lg shadow-sm"
+                type="date"
+                v-model="startDate"
+                name="startDate"
+                id="startDate"
+              />
+              <input
+                class="border border-grey-300 rounded-lg shadow-sm"
+                type="date"
+                v-model="endDate"
+                name="endDate"
+                id="endDate"
+              />
+              <inertia-link
+              :href="
+                route('hourly-ads.index', {
+                  startDate: startDate,
+                  endDate: endDate,
+                })
+              "
+              class="
+                inline-block
+                bg-blue-500
+                hover:bg-blue-400
+                focus:outline-none
+                focus:ring
+                focus:ring-offset-2
+                focus:ring-blue-500
+                focus:ring-opacity-50
+                text-white
+                px-5
+                py-3
+                hover:-translate-y-0.5
+                transform
+                transition
+                active:bg-blue-600
+                rounded-lg
+                shadow-lg
+                uppercase
+                tracking-wider
+                font-semibold
+                text-sm
+              "
+            >
+              Fetch
+            </inertia-link>
+            </div>
+          </div>
           <div class="p-6 bg-white border-b border-gray-200">
             <table class="table-auto mx-auto">
               <thead>
@@ -114,8 +165,27 @@ export default {
       return formatedDatetime.toLocaleTimeString('en-US');
     }
   },
+  data: () => ({
+    startDate: "2021-06-01",
+    endDate: "2021-06-07",
+  }),
   props: {
     hourlyAds: Object,
+    begin: String,
+    end: String
+  },
+  mounted() {
+    if (this.begin) {
+      this.startDate=this.begin;
+    }
+    if (this.end) {
+      this.endDate=this.end;
+    }
+    if (this.$page.props.flash.success) {
+      this.$toast.success(this.$page.props.flash.success);
+    } else if (this.$page.props.flash.error) {
+      this.$toast.error(this.$page.props.flash.error);
+    }
   },
 };
 </script>

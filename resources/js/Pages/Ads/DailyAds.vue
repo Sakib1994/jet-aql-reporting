@@ -9,13 +9,57 @@
           <!-- absolute -top-7 right-0 -->
           <inertia-link
             :href="route('daily-ads.fetchdaily')"
-            class="inline-block bg-indigo-500 hover:bg-indigo-400 focus:outline-none focus:ring focus:ring-offset-2 focus:ring-indigo-500 focus:ring-opacity-50 text-white px-5 py-3 hover:-translate-y-0.5 transform transition active:bg-indigo-600 rounded-lg shadow-lg uppercase tracking-wider font-semibold text-sm"
+            class="
+              inline-block
+              bg-indigo-500
+              hover:bg-indigo-400
+              focus:outline-none
+              focus:ring
+              focus:ring-offset-2
+              focus:ring-indigo-500
+              focus:ring-opacity-50
+              text-white
+              px-5
+              py-3
+              hover:-translate-y-0.5
+              transform
+              transition
+              active:bg-indigo-600
+              rounded-lg
+              shadow-lg
+              uppercase
+              tracking-wider
+              font-semibold
+              text-sm
+            "
           >
             Add Yahoo from CSV
           </inertia-link>
           <inertia-link
             :href="route('daily-ads.create')"
-            class="inline-block bg-green-500 hover:bg-green-400 focus:outline-none focus:ring focus:ring-offset-2 focus:ring-green-500 focus:ring-opacity-50 text-white px-5 py-3 hover:-translate-y-0.5 transform transition active:bg-green-600 rounded-lg shadow-lg uppercase tracking-wider font-semibold text-sm"
+            class="
+              inline-block
+              bg-green-500
+              hover:bg-green-400
+              focus:outline-none
+              focus:ring
+              focus:ring-offset-2
+              focus:ring-green-500
+              focus:ring-opacity-50
+              text-white
+              px-5
+              py-3
+              hover:-translate-y-0.5
+              transform
+              transition
+              active:bg-green-600
+              rounded-lg
+              shadow-lg
+              uppercase
+              tracking-wider
+              font-semibold
+              text-sm
+            "
           >
             New Yahoo
           </inertia-link>
@@ -26,6 +70,57 @@
     <div class="py-8">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
         <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
+          <div class="flex w-full h-12 space-x-2 justify-end pr-4">
+            <div class="mt-4 space-x-2">
+              <input
+                class="border border-grey-300 rounded-lg shadow-sm"
+                type="date"
+                v-model="startDate"
+                name="startDate"
+                id="startDate"
+              />
+              <input
+                class="border border-grey-300 rounded-lg shadow-sm"
+                type="date"
+                v-model="endDate"
+                name="endDate"
+                id="endDate"
+              />
+              <inertia-link
+              :href="
+                route('daily-ads.index', {
+                  startDate: startDate,
+                  endDate: endDate,
+                })
+              "
+              class="
+                inline-block
+                bg-blue-500
+                hover:bg-blue-400
+                focus:outline-none
+                focus:ring
+                focus:ring-offset-2
+                focus:ring-blue-500
+                focus:ring-opacity-50
+                text-white
+                px-5
+                py-3
+                hover:-translate-y-0.5
+                transform
+                transition
+                active:bg-blue-600
+                rounded-lg
+                shadow-lg
+                uppercase
+                tracking-wider
+                font-semibold
+                text-sm
+              "
+            >
+              Fetch
+            </inertia-link>
+            </div>
+          </div>
           <div class="p-6 bg-white border-b border-gray-200">
             <table class="table-auto mx-auto">
               <thead>
@@ -55,15 +150,15 @@
                 >
                   <td class="px-2">
                     <inertia-link
-                        :href="
-                          route('datewise-hourly-detail', {
-                            date: data.日付,
-                            accountId: data.AdsAccountId,
-                          })
-                        "
+                      :href="
+                        route('datewise-hourly-detail', {
+                          date: data.日付,
+                          accountId: data.AdsAccountId,
+                        })
+                      "
                       >{{ data.日付 }}
-                      </inertia-link>
-                    </td>
+                    </inertia-link>
+                  </td>
                   <td class="px-2">{{ data.name }}</td>
                   <td class="px-2">{{ data.表示回数 }}</td>
                   <td class="px-2">{{ data.クリック数 }}</td>
@@ -72,7 +167,9 @@
                   <td class="px-2">{{ formatPrice(data.費用) }}</td>
                   <td class="px-2">{{ data.コンバージョン }}</td>
                   <td class="px-2">{{ data.コンバージョン率 }}%</td>
-                  <td class="px-2">{{ formatPrice(data.コンバージョン単価) }}</td>
+                  <td class="px-2">
+                    {{ formatPrice(data.コンバージョン単価) }}
+                  </td>
                   <td class="px-2 flex flex-row space-x-2">
                     <inertia-link
                       :href="route('daily-ads.edit', data.id)"
@@ -93,10 +190,7 @@
                 </tr>
               </tbody>
             </table>
-            <Pagination
-              class="mt-6"
-              :links="dailyAds.links"
-            />
+            <Pagination class="mt-6" :links="dailyAds.links" />
           </div>
         </div>
       </div>
@@ -105,16 +199,22 @@
 </template>
 
 <script>
-import AppLayout from '@/Layouts/AppLayout'
+import AppLayout from "@/Layouts/AppLayout";
 import Pagination from "@/Components/Pagination";
 export default {
   components: {
     AppLayout,
     Pagination,
   },
-  methods:{
+  data: () => ({
+    startDate: "2021-06-01",
+    endDate: "2021-06-07",
+  }),
+  methods: {
     formatPrice(value) {
-      const formatter = new Intl.NumberFormat("en-US", { style: "currency", currency: "JPY",
+      const formatter = new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "JPY",
         maximumFractionDigits: 0,
       });
       return formatter.format(value);
@@ -122,6 +222,22 @@ export default {
   },
   props: {
     dailyAds: Object,
+    begin: String,
+    end: String
   },
+  mounted(){
+    console.log();
+    if (this.begin) {
+      this.startDate=this.begin;
+    }
+    if (this.end) {
+      this.endDate=this.end;
+    }
+    if (this.$page.props.flash.success) {
+      this.$toast.success(this.$page.props.flash.success);
+    } else if (this.$page.props.flash.error) {
+      this.$toast.error(this.$page.props.flash.error);
+    }
+  }
 };
 </script>

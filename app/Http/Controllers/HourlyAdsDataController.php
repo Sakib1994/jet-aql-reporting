@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\adsAccount;
 use App\Models\HourlyAdsData;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -19,10 +20,26 @@ class HourlyAdsDataController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        $hourlyAdsData = HourlyAdsData::get();
-        
+        $begin = new Carbon('first day of this month');
+        $begin = $begin->isoFormat('YYYY-MM-DD');
+        $end = new Carbon('today');
+        $end = $end->isoFormat('YYYY-MM-DD');
+        $hourlyAdsData = HourlyAdsData::whereDate('time', '>=', $begin)->whereDate('time', '<=', $end)->latest()->get();
+        if ($request->startDate && $request->endDate) {
+            $begin = $request->startDate;
+            $end = $request->endDate;
+            $hourlyAdsData = HourlyAdsData::whereDate('time', '>=', $begin)->whereDate('time', '<=', $end)->latest()->get();
+        }
+        elseif ($request->startDate) {
+            $begin = $request->startDate;
+            $hourlyAdsData = HourlyAdsData::whereDate('time', '>=', $begin)->latest()->get();
+        }
+        elseif ($request->endDate) {
+            $end = $request->endDate;
+            $hourlyAdsData = HourlyAdsData::whereDate('time', '<=', $end)->latest()->get();
+        }
         $formatedAllAccounts = [];
         foreach ($hourlyAdsData as $key => $value) {
             $dailyAdsData = [
@@ -43,13 +60,22 @@ class HourlyAdsDataController extends Controller
         $myCollectionObj = collect($formatedAllAccounts);
 
         $formatedAllAccounts = $this->paginate($myCollectionObj)->withPath(route('hourly-ads.index'));
+        if ($request->startDate && $request->endDate) {
+            $formatedAllAccounts = $this->paginate($myCollectionObj)
+            ->withPath(route('hourly-ads.index', [
+                'startDate'=> $request->startDate,
+                'endDate'=> $request->endDate,
+            ]));
+        }
         return Inertia::render('Ads/HourlyAds', [
             "hourlyAds" => $formatedAllAccounts,
+            "begin"=>$begin,
+            "end"=>$end 
         ]);
     }
     public function datewise(string $date, int $accountId)
     {
-        $hourlyAdsData = HourlyAdsData::where('time',"like","$date%")->where('AdsAccountId',$accountId)->orderBy('time')->get();
+        $hourlyAdsData = HourlyAdsData::where('time', "like", "$date%")->where('AdsAccountId', $accountId)->orderBy('time')->get();
         // ddd($date, $accountId, $hourlyAdsData);
         $formatedAllAccounts = [];
         foreach ($hourlyAdsData as $key => $value) {
@@ -122,10 +148,10 @@ class HourlyAdsDataController extends Controller
      */
     public function edit(int $hourlyAdsDataId)
     {
-        $hourlyAdsData=HourlyAdsData::find($hourlyAdsDataId);
+        $hourlyAdsData = HourlyAdsData::find($hourlyAdsDataId);
         // ddd($hourlyAdsData);
         return Inertia::render('Ads/HourlyUpdate', [
-            'hourlyAdsData' => $hourlyAdsData
+            'hourlyAdsData' => $hourlyAdsData,
         ]);
     }
 
@@ -175,7 +201,7 @@ class HourlyAdsDataController extends Controller
             return Redirect::route('hourly-ads.index')->with('error', $response);
         }
     }
-    
+
     public function save($fileName, $accountId)
     {
         $file = mb_convert_encoding(Storage::disk('public')->get("uploads/$fileName"), "UTF-8", "utf-16le");
@@ -205,11 +231,11 @@ class HourlyAdsDataController extends Controller
                         "time" => $time,
                         "clicks" => $row_data[3],
                         "impressions" => $row_data[2],
-                        "ctr" => round($row_data[4] * 100,2),
+                        "ctr" => round($row_data[4] * 100, 2),
                         "cost" => $row_data[5],
                         "cpc" => round($row_data[6]),
                         "conversions" => round($row_data[7]),
-                        "conversions_rate" => round($row_data[8] * 100,2),
+                        "conversions_rate" => round($row_data[8] * 100, 2),
                         "cost_per_conversion" => round($row_data[9]),
                     ]);
                     // dd($hourlyAdsData,$row_data);

@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\adsAccount;
 use App\Models\DailyAdsData;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -19,9 +20,26 @@ class DailyAdsDataController extends Controller
      *
      * @return \Illuminate\Http\Response
      */
-    public function index()
+    public function index(Request $request)
     {
-        $dailyAllAccounts = DailyAdsData::get();
+        $begin = new Carbon('first day of this month');
+        $begin = $begin->isoFormat('YYYY-MM-DD');
+        $end = new Carbon('yesterday');
+        $end = $end->isoFormat('YYYY-MM-DD');
+        $dailyAllAccounts = DailyAdsData::latest()->get();
+        if ($request->startDate && $request->endDate) {
+            $begin = $request->startDate;
+            $end = $request->endDate;
+            $dailyAllAccounts = DailyAdsData::where('date', '>=', $begin)->where('date', '<=', $end)->latest()->get();
+        }
+        elseif ($request->startDate) {
+            $begin = $request->startDate;
+            $dailyAllAccounts = DailyAdsData::where('date', '>=', $begin)->latest()->get();
+        }
+        elseif ($request->endDate) {
+            $end = $request->endDate;
+            $dailyAllAccounts = DailyAdsData::where('date', '<=', $end)->latest()->get();
+        }
         $formatedAllAccounts = [];
         foreach ($dailyAllAccounts as $key => $value) {
             $dailyAdsData = [
@@ -43,8 +61,17 @@ class DailyAdsDataController extends Controller
         // ddd($formatedAllAccounts);
         $myCollectionObj = collect($formatedAllAccounts);
         $formatedAllAccounts = $this->paginate($myCollectionObj)->withPath(route('daily-ads.index'));
+        if ($request->startDate && $request->endDate) {
+            $formatedAllAccounts = $this->paginate($myCollectionObj)
+            ->withPath(route('daily-ads.index', [
+                'startDate'=> $request->startDate,
+                'endDate'=> $request->endDate,
+            ]));
+        }
         return Inertia::render('Ads/DailyAds', [
             "dailyAds" => $formatedAllAccounts,
+            "begin"=>$begin,
+            "end"=>$end 
         ]);
     }
     public function paginate($items, $perPage = 15, $page = null, $options = [])

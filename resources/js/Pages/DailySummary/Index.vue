@@ -7,9 +7,7 @@
     </template>
     <div class="py-8">
       <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-        <div
-          class="pt-2 sm:px-15 bg-white overflow-hidden shadow-sm sm:rounded-lg"
-        >
+        <div class="pt-2 sm:px-15 bg-white overflow-hidden shadow-sm sm:rounded-lg" >
           <div class="flex w-full h-12 space-x-2 justify-end pr-4">
             <div class="mt-1">
               <input
@@ -68,14 +66,7 @@
               @toggleAcoount="toggleAcoount"
             />
             <div
-              class="
-                w-full
-                h-screen
-                py-6
-                px-2
-                bg-white
-                border-b border-gray-200
-              "
+              class="w-full h-screen py-6 px-2 bg-white border-b border-gray-200"
             >
               <table class="table-auto mx-auto">
                 <thead>
